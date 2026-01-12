@@ -1,48 +1,50 @@
-// server.js
-const express = require("express");
-const path = require("path");
+// ================================
+// Steam Keys App – Server
+// ================================
+
 require("dotenv").config();
 
-const { createClient } = require("@libsql/client");
+const express = require("express");
+const path = require("path");
 
+// --------------------
+// App Setup
+// --------------------
 const app = express();
+app.set("trust proxy", 1);
+const PORT = process.env.PORT || 3000;
+
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
 // --------------------
-// Rate-Limit (1 Claim / 10 Sekunden pro IP)
+// Admin Token
 // --------------------
-const rateMap = new Map();
-function rateLimit(req, res, next) {
-  const ip =
-    (req.headers["x-forwarded-for"]?.toString().split(",")[0] || "").trim() ||
-    req.ip;
-
-  const now = Date.now();
-  const last = rateMap.get(ip) || 0;
-
-  if (now - last < 10_000) {
-    return res.status(429).json({ error: "Zu viele Versuche. Bitte kurz warten." });
-  }
-
-  rateMap.set(ip, now);
-  next();
+const ADMIN_TOKEN = process.env.ADMIN_TOKEN;
+if (!ADMIN_TOKEN) {
+  console.warn("⚠️ ADMIN_TOKEN fehlt in der .env Datei");
 }
 
 // --------------------
-// Turso (libSQL) Client
+// Database (Turso / SQLite)
 // --------------------
-if (!process.env.DATABASE_URL || !process.env.DATABASE_AUTH_TOKEN) {
-  console.warn("⚠️ DATABASE_URL oder DATABASE_AUTH_TOKEN fehlt (Turso).");
+const { createClient } = require("@libsql/client");
+
+const DATABASE_URL = process.env.DATABASE_URL;
+const DATABASE_AUTH_TOKEN = process.env.DATABASE_AUTH_TOKEN;
+
+if (!DATABASE_URL) {
+  console.error("❌ DATABASE_URL fehlt");
+  process.exit(1);
 }
 
 const db = createClient({
-  url: process.env.DATABASE_URL,
-  authToken: process.env.DATABASE_AUTH_TOKEN,
+  url: DATABASE_URL,
+  authToken: DATABASE_AUTH_TOKEN
 });
 
 // --------------------
-// DB Init
+// Init DB Tables
 // --------------------
 async function initDb() {
   await db.execute(`
@@ -50,188 +52,211 @@ async function initDb() {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       title TEXT NOT NULL,
       imageUrl TEXT NOT NULL,
-      steamKey TEXT NOT NULL,
-      claimed INTEGER NOT NULL DEFAULT 0,
+      steamKey TEXT NOT NULL UNIQUE,
+      claimed INTEGER DEFAULT 0,
       claimedAt TEXT
     )
   `);
-
-  // Doppelte Steam-Keys blockieren
-  await db.execute(`
-    CREATE UNIQUE INDEX IF NOT EXISTS idx_unique_steamkey ON keys(steamKey)
-  `);
-
-  console.log("✅ DB bereit (Turso).");
 }
+initDb();
 
 // --------------------
-// Admin Guard
+// Helper: Admin Check
 // --------------------
 function requireAdmin(req, res, next) {
-  const token = req.header("x-admin-token");
-  if (!process.env.ADMIN_TOKEN) {
-    return res.status(500).json({ error: "ADMIN_TOKEN not set" });
-  }
-  if (token !== process.env.ADMIN_TOKEN) {
-    return res.status(403).json({ error: "Forbidden" });
+  const token = req.headers["x-admin-token"];
+  if (!token || token !== ADMIN_TOKEN) {
+    return res.status(401).json({ error: "unauthorized" });
   }
   next();
 }
 
 // --------------------
-// Public API: Liste (nur nicht geclaimt, OHNE steamKey)
+// Helper: Client IP
 // --------------------
-app.get("/api/keys", async (req, res) => {
-  try {
-    const result = await db.execute(
-      "SELECT id, title, imageUrl FROM keys WHERE claimed = 0 ORDER BY id ASC"
-    );
-    res.json(result.rows);
-  } catch (e) {
-    res.status(500).json({ error: "DB error" });
-  }
-});
+function getClientIp(req) {
+  const xf = req.headers["x-forwarded-for"];
+  let ip = xf ? String(xf).split(",")[0].trim() : (req.ip || req.connection?.remoteAddress || "unknown");
+
+  // IPv4-mapped IPv6 normalisieren (::ffff:127.0.0.1 -> 127.0.0.1)
+  ip = ip.replace(/^::ffff:/, "");
+
+  // localhost IPv6 vereinheitlichen
+  if (ip === "::1") ip = "127.0.0.1";
+
+  return ip;
+}
+
 
 // --------------------
-// Public API: Claim (atomar) + Rate-Limit
+// Claim Cooldown (pro IP)
 // --------------------
-app.post("/api/claim/:id", rateLimit, async (req, res) => {
-  
-// Honeypot gegen Bots:
-  // Feld "website" muss existieren und MUSS leer sein
+const CLAIM_COOLDOWN_MS = 30 * 60 * 1000; // 30 Minuten
+const lastClaimByIp = new Map();
+
+// --------------------
+// Public Routes
+// --------------------
+
+// Alle verfügbaren Keys
+app.get("/api/keys", async (req, res) => {
+  const result = await db.execute(`
+    SELECT id, title, imageUrl
+    FROM keys
+    WHERE claimed = 0
+    ORDER BY id ASC
+  `);
+
+  res.json(result.rows);
+});
+
+// Claim Key
+app.post("/api/claim/:id", async (req, res) => {
+  // --- Honeypot ---
   if (!req.body || typeof req.body.website === "undefined") {
-    return res.status(400).json({ error: "Bot protection: missing honeypot" });
+    return res.status(400).json({ error: "bot_detected" });
   }
   if (String(req.body.website).trim() !== "") {
-    return res.status(400).json({ error: "Bot protection: honeypot filled" });
+    return res.status(400).json({ error: "bot_detected" });
   }
-  const id = Number(req.params.id);
-  const now = new Date().toISOString();
 
-  try {
-    const upd = await db.execute({
-      sql: "UPDATE keys SET claimed = 1, claimedAt = ? WHERE id = ? AND claimed = 0",
-      args: [now, id],
+  // --- Cooldown ---
+  const ip = getClientIp(req);
+  const now = Date.now();
+  const last = lastClaimByIp.get(ip) || 0;
+  const diff = now - last;
+
+  if (diff < CLAIM_COOLDOWN_MS) {
+    return res.status(429).json({
+      error: "cooldown",
+      retryAfterMs: CLAIM_COOLDOWN_MS - diff
     });
-
-    if (upd.rowsAffected === 0) {
-      return res.status(409).json({ error: "Already claimed" });
-    }
-
-    const row = await db.execute({
-      sql: "SELECT steamKey FROM keys WHERE id = ?",
-      args: [id],
-    });
-
-    if (!row.rows?.[0]) return res.status(500).json({ error: "DB error" });
-    res.json({ steamKey: row.rows[0].steamKey });
-  } catch (e) {
-    res.status(500).json({ error: "DB error" });
   }
+
+  const id = req.params.id;
+
+  // --- Key laden ---
+  const result = await db.execute({
+    sql: `SELECT * FROM keys WHERE id = ?`,
+    args: [id]
+  });
+
+  if (result.rows.length === 0) {
+    return res.status(404).json({ error: "not_found" });
+  }
+
+  const key = result.rows[0];
+
+  if (key.claimed) {
+    return res.status(409).json({ error: "already_claimed" });
+  }
+
+  // --- Claim durchführen ---
+  await db.execute({
+    sql: `
+      UPDATE keys
+      SET claimed = 1, claimedAt = ?
+      WHERE id = ?
+    `,
+    args: [new Date().toISOString(), id]
+  });
+
+  // Cooldown starten (nur bei Erfolg!)
+  lastClaimByIp.set(ip, Date.now());
+
+  res.json({ steamKey: key.steamKey });
 });
 
 // --------------------
-// Admin API: Key hinzufügen
+// Admin Routes
 // --------------------
+
+// Admin: alle Keys
+app.get("/api/admin/keys", requireAdmin, async (req, res) => {
+  const result = await db.execute(`
+    SELECT *
+    FROM keys
+    ORDER BY id ASC
+  `);
+  res.json(result.rows);
+});
+
+// Admin: Key hinzufügen
 app.post("/api/admin/add", requireAdmin, async (req, res) => {
   const { title, imageUrl, steamKey } = req.body;
 
   if (!title || !imageUrl || !steamKey) {
-    return res.status(400).json({ error: "Missing fields" });
+    return res.status(400).json({ error: "missing_fields" });
   }
 
   try {
-    const r = await db.execute({
-      sql: "INSERT INTO keys (title, imageUrl, steamKey) VALUES (?, ?, ?)",
-      args: [title.trim(), imageUrl.trim(), steamKey.trim()],
+    await db.execute({
+      sql: `
+        INSERT INTO keys (title, imageUrl, steamKey)
+        VALUES (?, ?, ?)
+      `,
+      args: [title, imageUrl, steamKey]
     });
-
-    res.json({ ok: true, id: Number(r.lastInsertRowid) });
-  } catch (e) {
-    // Unique constraint => doppelt
-    if (String(e?.message || "").toLowerCase().includes("unique")) {
-      return res.status(409).json({ error: "Steam-Key existiert bereits" });
+  } catch (err) {
+    if (String(err).includes("UNIQUE")) {
+      return res.status(409).json({ error: "duplicate_key" });
     }
-    res.status(500).json({ error: "DB error" });
+    throw err;
   }
+
+  res.json({ ok: true });
 });
 
-// --------------------
-// Admin API: Übersicht
-// --------------------
-app.get("/api/admin/keys", requireAdmin, async (req, res) => {
-  try {
-    const result = await db.execute(
-      `SELECT id, title, imageUrl, steamKey, claimed, claimedAt
-       FROM keys
-       ORDER BY claimed ASC, id ASC`
-    );
-    res.json(result.rows);
-  } catch (e) {
-    res.status(500).json({ error: "DB error" });
-  }
-});
-
-// --------------------
-// Admin API: Löschen
-// --------------------
+// Admin: Key löschen
 app.delete("/api/admin/keys/:id", requireAdmin, async (req, res) => {
-  const id = Number(req.params.id);
-  try {
-    const r = await db.execute({
-      sql: "DELETE FROM keys WHERE id = ?",
-      args: [id],
-    });
+  const id = req.params.id;
 
-    if (r.rowsAffected === 0) return res.status(404).json({ error: "Not found" });
-    res.json({ ok: true });
-  } catch (e) {
-    res.status(500).json({ error: "DB error" });
-  }
+  await db.execute({
+    sql: `DELETE FROM keys WHERE id = ?`,
+    args: [id]
+  });
+
+  res.json({ ok: true });
 });
 
 // --------------------
-// Steam Cover: HTML-Suche -> AppID -> Bild-URLs
+// Steam Cover Proxy
 // --------------------
 app.get("/api/steam/cover", async (req, res) => {
+  const title = req.query.title;
+  if (!title) return res.status(400).end();
+
   try {
-    const title = String(req.query.title || "").trim();
-    if (!title) return res.status(400).json({ error: "Missing title" });
+    const searchRes = await fetch(
+      `https://store.steampowered.com/api/storesearch/?term=${encodeURIComponent(title)}&l=english&cc=US`
+    );
+    const data = await searchRes.json();
 
-    const searchUrl = `https://store.steampowered.com/search/?term=${encodeURIComponent(title)}&l=german`;
-
-    const r = await fetch(searchUrl, {
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36",
-        Accept: "text/html,*/*",
-      },
-    });
-
-    if (!r.ok) {
-      return res.status(502).json({ error: "Steam search failed", status: r.status });
+    if (!data.items || data.items.length === 0) {
+      return res.status(404).end();
     }
 
-    const html = await r.text();
-    const match = html.match(/\/app\/(\d+)\//);
-    if (!match) return res.status(404).json({ error: "No match" });
-
-    const appid = match[1];
-    const header = `https://cdn.akamai.steamstatic.com/steam/apps/${appid}/header.jpg`;
-
-    res.json({ appid, matchedTitle: title, header });
-  } catch (e) {
-    res.status(500).json({ error: "Server error" });
+    const game = data.items[0];
+    res.json({
+      appid: game.id,
+      matchedTitle: game.name,
+      header: game.tiny_image.replace("capsule_sm_120", "header")
+    });
+  } catch {
+    res.status(500).end();
   }
 });
 
-const PORT = process.env.PORT || 3000;
+// --------------------
+// Fallback
+// --------------------
+app.use((req, res) => {
+  res.sendFile(path.join(__dirname, "public", "index.html"));
+});
 
-initDb()
-  .then(() => {
-    app.listen(PORT, () => console.log(`Server läuft: http://localhost:${PORT}`));
-  })
-  .catch((e) => {
-    console.error("DB Init Fehler:", e);
-    process.exit(1);
-  });
+// --------------------
+// Start Server
+// --------------------
+app.listen(PORT, () => {
+  console.log(`✅ Server läuft auf Port ${PORT}`);
+});
