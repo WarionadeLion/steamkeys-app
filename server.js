@@ -96,6 +96,15 @@ app.get("/api/keys", async (req, res) => {
 // Public API: Claim (atomar) + Rate-Limit
 // --------------------
 app.post("/api/claim/:id", rateLimit, async (req, res) => {
+  
+// Honeypot gegen Bots:
+  // Feld "website" muss existieren und MUSS leer sein
+  if (!req.body || typeof req.body.website === "undefined") {
+    return res.status(400).json({ error: "Bot protection: missing honeypot" });
+  }
+  if (String(req.body.website).trim() !== "") {
+    return res.status(400).json({ error: "Bot protection: honeypot filled" });
+  }
   const id = Number(req.params.id);
   const now = new Date().toISOString();
 
