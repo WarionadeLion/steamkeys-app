@@ -47,15 +47,73 @@
       text-shadow: 0 0 18px rgba(125, 211, 252, .35);
       margin: 0 0 10px;
     }
-    #adminLogin h2 { color: var(--accent2); }
     .sub, .small{ color: var(--muted); }
+    .small{ font-size: 12px; }
 
-    .grid{
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-      gap: 16px;
+    .shell{
+      max-width: 1100px;
+      margin: 0 auto;
       padding: 18px;
     }
+
+    .topbar{
+      display:flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .stats{
+      display:flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .pill{
+      display:inline-flex;
+      gap:8px;
+      align-items:center;
+      padding: 8px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: rgba(15, 25, 50, .35);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+    }
+
+    .grid{
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 16px;
+    }
+
+@media (max-width: 1400px){
+  .grid{
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+@media (max-width: 1100px){
+  .grid{
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 800px){
+  .grid{
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 520px){
+  .grid{
+    grid-template-columns: 1fr;
+  }
+}
 
     @keyframes fadeUp{
       from{ opacity:0; transform: translateY(10px); }
@@ -70,7 +128,7 @@
       box-shadow: var(--shadow);
       backdrop-filter: blur(14px);
       -webkit-backdrop-filter: blur(14px);
-      transition: transform .15s ease, border-color .15s ease, opacity .2s ease;
+      transition: transform .15s ease, border-color .15s ease, opacity .2s ease, box-shadow .2s ease;
       animation: fadeUp .25s ease;
     }
     .card:hover{
@@ -143,6 +201,7 @@
       border-color: rgba(125,211,252,.70);
     }
 
+    /* Kopierbutton soll komplett grün werden */
     .btn-success{
       background-color: #22c55e !important;
       border-color: #16a34a !important;
@@ -150,9 +209,6 @@
     }
 
     .btn-danger{
-    #logoutBtn{
-    margin-top: 6px;
-    }
       background: rgba(239,68,68,.16);
       border-color: rgba(239,68,68,.45);
     }
@@ -174,7 +230,7 @@
     }
 
     .admin{
-      margin: 18px;
+      margin-top: 18px;
       padding: 14px;
       border-radius: var(--radius);
       border: 1px solid var(--border);
@@ -232,472 +288,602 @@
       from{ opacity:0; transform: translateY(-10px); }
       to{ opacity:1; transform:none; }
     }
+
+    /* Empty state */
+    #emptyState{
+      text-align:center;
+      max-width: 520px;
+      margin: 18px auto;
+    }
+
+    /* Skeleton cards */
+    .skeleton{
+      height: 260px;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      background: linear-gradient(
+        100deg,
+        rgba(255,255,255,.08) 40%,
+        rgba(255,255,255,.18) 50%,
+        rgba(255,255,255,.08) 60%
+      );
+      background-size: 200% 100%;
+      animation: shimmer 1.2s infinite;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+    }
+    @keyframes shimmer{
+      from{ background-position: 200% 0; }
+      to{ background-position: -200% 0; }
+    }
   </style>
 </head>
 
 <body>
   <div id="toasts" class="toast-container"></div>
 
-  <div class="admin" style="margin-bottom:0;">
-    <h1>🎮 Steam-Keys – First come, first served!</h1>
-    <p class="small">Keys sind erst nach Klick sichtbar und können nur 1× geclaimt werden.</p>
-  </div>
+  <div class="shell">
+    <div class="topbar">
+      <div>
+        <h1>Übriggebliebene Steam Keys</h1>
+        <p class="small">Keys sind erst nach Klick sichtbar und können nur 1× geclaimt werden.</p>
+      </div>
 
-  <div id="grid" class="grid"></div>
-
-  <!-- Admin Login -->
-  <div class="admin" id="adminLogin">
-    <h2>Admin</h2>
-    <div class="row">
-      <input id="adminToken" placeholder="Admin Token" type="password" />
-      <button id="unlockAdminBtn" class="btn-primary" type="button">Admin freischalten</button>
-      <button id="logoutBtn" type="button" style="display:none;">Logout</button>
-      <div id="unlockStatus" class="small"></div>
-    </div>
-  </div>
-
-  <!-- Admin Bereich (hidden bis Token ok) -->
-  <div id="adminArea" class="hidden">
-    <div class="admin">
-      <h2>Admin: Key hinzufügen</h2>
-      <div class="row">
-        <input id="title" placeholder="Spielname (z.B. Hollow Knight)" />
-        <input id="imageUrl" placeholder="Bild-URL (automatisch möglich)" />
-        <button id="fetchCoverBtn" class="btn-primary" type="button">Cover automatisch holen</button>
-        <div id="coverStatus" class="small"></div>
-
-        <input id="steamKey" placeholder="Ein Steam Key (optional, wenn Bulk genutzt wird)" />
-        <textarea id="bulkKeys" rows="5" placeholder="Bulk Import: ein Steam Key pro Zeile"></textarea>
-
-        <button id="addBtn" class="btn-primary" type="button">Hinzufügen</button>
-        <div id="addStatus" class="small"></div>
+      <div class="stats">
+        <div id="statsAvail" class="pill small">🎮 Verfügbar: …</div>
+        <div id="statsClaimed" class="pill small hidden">🔒 Geclaimt: …</div>
+        <button id="shareBtn" class="btn-primary" type="button">🔗 Seite teilen</button>
       </div>
     </div>
 
-    <div class="admin">
-      <h2>Admin: Übersicht (alle Keys)</h2>
-      <button id="refreshAdminBtn" class="btn-primary" type="button">Übersicht neu laden</button>
-      <div id="adminStatus" class="small"></div>
+    <!-- Empty State -->
+    <div id="emptyState" class="admin hidden">
+      <h2>🎮 Keine Keys verfügbar</h2>
+      <p class="small">Zurzeit sind alle Steam Keys vergriffen.<br>Schau später wieder vorbei!</p>
+    </div>
 
-      <div style="overflow:auto; margin-top:10px;">
-        <table id="adminTable">
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Spiel</th>
-              <th>Claimed?</th>
-              <th>ClaimedAt</th>
-              <th>SteamKey</th>
-              <th style="cursor:default;">Aktion</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
+    <!-- Skeletons -->
+    <div id="skeletons" class="grid">
+      <div class="skeleton"></div>
+      <div class="skeleton"></div>
+      <div class="skeleton"></div>
+    </div>
+
+    <!-- Cards -->
+    <div id="grid" class="grid"></div>
+
+    <!-- Admin Login (sichtbar), Admin Area (versteckt bis Token ok) -->
+    <div class="admin" id="adminLogin">
+      <h2>Admin</h2>
+      <div class="row">
+        <input id="adminToken" placeholder="Admin Token" type="password" />
+        <button id="unlockAdminBtn" class="btn-primary" type="button">Admin freischalten</button>
+        <button id="logoutBtn" class="btn-danger hidden" type="button">Logout</button>
+        <div id="unlockStatus" class="small"></div>
+      </div>
+    </div>
+
+    <div id="adminArea" class="hidden">
+      <div class="admin">
+        <h2>Admin: Key hinzufügen</h2>
+        <div class="row">
+          <input id="title" placeholder="Spielname (z.B. Hollow Knight)" />
+          <input id="imageUrl" placeholder="Bild-URL (z.B. https://.../cover.jpg)" />
+          <button id="fetchCoverBtn" class="btn-primary" type="button">Cover automatisch holen</button>
+          <div id="coverStatus" class="small"></div>
+
+          <input id="steamKey" placeholder="Ein Steam Key (oder Bulk darunter)" />
+          <textarea id="bulkKeys" rows="5" placeholder="Bulk Import: ein Steam Key pro Zeile"></textarea>
+
+          <button id="addBtn" class="btn-primary" type="button">Hinzufügen</button>
+          <div id="addStatus" class="small"></div>
+        </div>
+      </div>
+
+      <div class="admin">
+        <h2>Admin: Übersicht (alle Keys)</h2>
+        <button id="refreshAdminBtn" class="btn-primary" type="button">Übersicht neu laden</button>
+        <div id="adminStatus" class="small"></div>
+
+        <div style="overflow:auto; margin-top:10px;">
+          <table id="adminTable">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Spiel</th>
+                <th>Claimed?</th>
+                <th>ClaimedAt</th>
+                <th>SteamKey</th>
+                <th style="cursor:default;">Aktion</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
       </div>
     </div>
   </div>
 
 <script>
-function toast(msg, type="success", timeout=2500){
-  const c = document.getElementById("toasts");
-  const t = document.createElement("div");
-  t.className = `toast ${type}`;
-  t.textContent = msg;
-  c.appendChild(t);
-  setTimeout(() => t.remove(), timeout);
-}
+  function toast(msg, type="success", timeout=2500){
+    const c = document.getElementById("toasts");
+    const t = document.createElement("div");
+    t.className = `toast ${type}`;
+    t.textContent = msg;
+    c.appendChild(t);
+    setTimeout(() => t.remove(), timeout);
+  }
 
-function escapeHtml(s) {
-  return String(s ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-}
+  function escapeHtml(s) {
+    return String(s ?? "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
 
-function smoothRemove(el){
-  el.style.opacity = "0";
-  el.style.transform = "translateY(10px)";
-  setTimeout(() => el.remove(), 200);
-}
+  function smoothRemove(el){
+    el.style.opacity = "0";
+    el.style.transform = "translateY(10px)";
+    setTimeout(() => el.remove(), 200);
+  }
 
-async function loadKeys() {
-  const res = await fetch("/api/keys");
-  const keys = await res.json();
-  const grid = document.getElementById("grid");
-  grid.innerHTML = "";
+  // --- Public stats (available always; claimed only when admin unlocked)
+  function setAvailCount(n){
+    document.getElementById("statsAvail").textContent = `🎮 Verfügbar: ${n}`;
+  }
+  function setClaimedCount(n){
+    const el = document.getElementById("statsClaimed");
+    el.textContent = `🔒 Geclaimt: ${n}`;
+    el.classList.remove("hidden");
+  }
 
-  keys.forEach(k => {
-    const card = document.createElement("div");
-    card.className = "card";
-    card.innerHTML = `
-      <img class="img" src="${k.imageUrl}" alt="Cover" />
-      <div class="content">
-        <div class="title">${escapeHtml(k.title)}</div>
-        <button class="revealBtn btn-primary" type="button">Key anzeigen</button>
+  // --- Feature 1+2+3+4+6 in loadKeys()
+  async function loadKeys() {
+    const skeletons = document.getElementById("skeletons");
+    const grid = document.getElementById("grid");
+    const emptyState = document.getElementById("emptyState");
 
-        <div class="keybox"></div>
+    // Skeletons an
+    skeletons.style.display = "grid";
+    grid.style.display = "none";
+    emptyState.classList.add("hidden");
 
-        <div style="display:none; gap:8px;" class="afterReveal">
-          <button class="copyBtn" type="button">Key kopieren</button>
-          <button class="closeBtn" type="button">Schließen</button>
+    const res = await fetch("/api/keys");
+    const keys = await res.json();
+
+    // Update available stats
+    setAvailCount(keys.length);
+
+    grid.innerHTML = "";
+
+    // Render cards
+    keys.forEach((k, index) => {
+      const card = document.createElement("div");
+      card.className = "card";
+      card.innerHTML = `
+        <img class="img" src="${k.imageUrl}" alt="Cover" />
+        <div class="content">
+          <div class="title">${escapeHtml(k.title)}</div>
+
+          <button class="revealBtn btn-primary" type="button">Key anzeigen</button>
+
+          <div class="keybox"></div>
+
+          <div style="display:none; gap:8px;" class="afterReveal">
+            <button class="copyBtn" type="button">Key kopieren</button>
+            <button class="closeBtn" type="button">Schließen</button>
+          </div>
+
+          <div class="small status"></div>
         </div>
+      `;
 
-        <div class="small status"></div>
-      </div>
-    `;
+      const btn = card.querySelector(".revealBtn");
+      const keybox = card.querySelector(".keybox");
+      const status = card.querySelector(".status");
+      const afterReveal = card.querySelector(".afterReveal");
+      const copyBtn = card.querySelector(".copyBtn");
+      const closeBtn = card.querySelector(".closeBtn");
 
-    const btn = card.querySelector(".revealBtn");
-    const keybox = card.querySelector(".keybox");
-    const status = card.querySelector(".status");
-    const afterReveal = card.querySelector(".afterReveal");
-    const copyBtn = card.querySelector(".copyBtn");
-    const closeBtn = card.querySelector(".closeBtn");
+      btn.addEventListener("click", async () => {
+        btn.disabled = true;
+        status.textContent = "Claim läuft…";
 
-    btn.addEventListener("click", async () => {
-      btn.disabled = true;
+        const claimRes = await fetch(`/api/claim/${k.id}`, { method: "POST" });
 
-      const claimRes = await fetch(`/api/claim/${k.id}`, { method: "POST" });
-
-      if (claimRes.status === 429) {
-        toast("Bitte kurz warten ⏳", "error");
-        btn.disabled = false;
-        return;
-      }
-
-      if (claimRes.status === 409) {
-        toast("Schon geclaimt (jemand war schneller) ❌", "error");
-        btn.remove();
-        return;
-      }
-
-      if (!claimRes.ok) {
-        toast("Fehler beim Claim ❌", "error");
-        btn.disabled = false;
-        return;
-      }
-
-      const data = await claimRes.json();
-
-      keybox.style.display = "block";
-      keybox.textContent = data.steamKey;
-
-      afterReveal.style.display = "flex";
-      status.textContent = "Geclaimt – jetzt kopieren oder schließen.";
-
-      copyBtn.onclick = async () => {
-        try {
-          await navigator.clipboard.writeText(data.steamKey);
-          toast("Key kopiert ✅");
-          copyBtn.classList.add("btn-success");
-          setTimeout(() => copyBtn.classList.remove("btn-success"), 700);
-        } catch {
-          const range = document.createRange();
-          range.selectNodeContents(keybox);
-          const sel = window.getSelection();
-          sel.removeAllRanges();
-          sel.addRange(range);
-          toast("Markiert – bitte Strg+C drücken", "error");
+        if (claimRes.status === 429) {
+          toast("Bitte kurz warten ⏳", "error");
+          btn.disabled = false;
+          status.textContent = "";
+          return;
         }
-      };
 
-      closeBtn.onclick = () => smoothRemove(card);
-    });
+        if (claimRes.status === 409) {
+          toast("Schon geclaimt (jemand war schneller) ❌", "error");
+          status.textContent = "Schon geclaimt.";
+          btn.remove();
+          return;
+        }
 
-    grid.appendChild(card);
-  });
-}
+        if (!claimRes.ok) {
+          toast("Fehler beim Claim ❌", "error");
+          status.textContent = "Fehler beim Claim.";
+          btn.disabled = false;
+          return;
+        }
 
-/* Steam Cover holen */
-document.getElementById("fetchCoverBtn").addEventListener("click", async () => {
-  const title = document.getElementById("title").value.trim();
-  const status = document.getElementById("coverStatus");
+        const data = await claimRes.json();
 
-  if (!title) {
-    status.textContent = "Bitte erst einen Spielnamen eingeben.";
-    toast("Bitte erst Spielname eingeben", "error");
-    return;
-  }
+        // Show key + buttons
+        keybox.style.display = "block";
+        keybox.textContent = data.steamKey;
+        afterReveal.style.display = "flex";
 
-  status.textContent = "Suche Steam…";
+        // Feature 3: Erfolgsmoment (Glow + Toast)
+        toast("Erfolgreich geclaimt ✅");
+        card.style.boxShadow = "0 0 34px rgba(34,197,94,.35), var(--shadow)";
 
-  const res = await fetch(`/api/steam/cover?title=${encodeURIComponent(title)}`);
+        // Feature 4: Letzter Key Hinweis
+        // Wenn der User einen Key claimt und es war vorher der letzte verfügbare
+        if (keys.length === 1) {
+          status.textContent = "🎉 Du hast den letzten Key erwischt!";
+          toast("Du hast den letzten Key erwischt! 🎉");
+        } else {
+          status.textContent = "Geclaimt – jetzt kopieren oder schließen.";
+        }
 
-  if (!res.ok) {
-    status.textContent = "Kein Treffer gefunden.";
-    toast("Kein Steam Treffer ❌", "error");
-    return;
-  }
+        // Kopieren
+        copyBtn.onclick = async () => {
+          try {
+            await navigator.clipboard.writeText(data.steamKey);
+            toast("Key kopiert ✅");
+            copyBtn.classList.add("btn-success");
+            setTimeout(() => copyBtn.classList.remove("btn-success"), 700);
+          } catch {
+            const range = document.createRange();
+            range.selectNodeContents(keybox);
+            const sel = window.getSelection();
+            sel.removeAllRanges();
+            sel.addRange(range);
+            toast("Markiert – bitte Strg+C drücken", "error");
+          }
+        };
 
-  const data = await res.json();
-  document.getElementById("imageUrl").value = data.header;
-  status.textContent = `Gefunden: ${data.matchedTitle}`;
-  toast("Cover übernommen ✅");
-});
+        // Schließen
+        closeBtn.onclick = () => smoothRemove(card);
 
-/* Admin State für Sortierung */
-const adminState = {
-  rows: [],
-  sortKey: "id",
-  sortDir: "asc"
-};
-
-function compareByKey(a, b, key, dir) {
-  const mul = dir === "asc" ? 1 : -1;
-
-  const av = a[key];
-  const bv = b[key];
-
-  if (key === "id" || key === "claimed") return (Number(av) - Number(bv)) * mul;
-
-  if (key === "claimedAt") {
-    const ad = av ? Date.parse(av) : 0;
-    const bd = bv ? Date.parse(bv) : 0;
-    return (ad - bd) * mul;
-  }
-
-  return String(av ?? "").localeCompare(String(bv ?? ""), "de", { sensitivity: "base" }) * mul;
-}
-
-function updateSortHeaderIndicators() {
-  const ths = document.querySelectorAll("#adminTable thead th");
-  ths.forEach(th => th.textContent = th.textContent.replace(/ [▲▼]$/, ""));
-
-  const mapKeyToIndex = { id:0, title:1, claimed:2, claimedAt:3, steamKey:4 };
-  const idx = mapKeyToIndex[adminState.sortKey];
-  const arrow = adminState.sortDir === "asc" ? "▲" : "▼";
-  if (ths[idx]) ths[idx].textContent = ths[idx].textContent + " " + arrow;
-}
-
-function attachAdminSortHandlers() {
-  const ths = document.querySelectorAll("#adminTable thead th");
-  const map = { 0:"id", 1:"title", 2:"claimed", 3:"claimedAt", 4:"steamKey" };
-
-  ths.forEach((th, idx) => {
-    if (!(idx in map)) return;
-    th.style.cursor = "pointer";
-    th.title = "Klicken zum Sortieren";
-
-    th.addEventListener("click", () => {
-      const key = map[idx];
-      if (adminState.sortKey === key) adminState.sortDir = adminState.sortDir === "asc" ? "desc" : "asc";
-      else { adminState.sortKey = key; adminState.sortDir = "asc"; }
-      renderAdminTable();
-    });
-  });
-
-  updateSortHeaderIndicators();
-}
-
-function renderAdminTable() {
-  const tbody = document.querySelector("#adminTable tbody");
-  const adminToken = document.getElementById("adminToken").value.trim();
-
-  const rows = [...adminState.rows].sort((a,b) => compareByKey(a,b,adminState.sortKey, adminState.sortDir));
-
-  tbody.innerHTML = "";
-  rows.forEach(r => {
-    const tr = document.createElement("tr");
-    const claimedText = r.claimed ? "✅ ja" : "❌ nein";
-    const claimedAt = r.claimedAt ? r.claimedAt : "-";
-
-    tr.innerHTML = `
-      <td>${r.id}</td>
-      <td>${escapeHtml(r.title)}</td>
-      <td>${claimedText}</td>
-      <td>${escapeHtml(claimedAt)}</td>
-      <td style="font-family: ui-monospace, Consolas, monospace;">${escapeHtml(r.steamKey)}</td>
-      <td><button data-del-id="${r.id}" class="btn-danger" type="button">Löschen</button></td>
-    `;
-    tbody.appendChild(tr);
-  });
-
-  tbody.querySelectorAll("button[data-del-id]").forEach(btn => {
-    btn.addEventListener("click", async () => {
-      const id = btn.getAttribute("data-del-id");
-      if (!confirm(`Key mit ID ${id} wirklich löschen?`)) return;
-
-      const delRes = await fetch(`/api/admin/keys/${id}`, {
-        method: "DELETE",
-        headers: { "x-admin-token": adminToken }
+        // Nach Claim: public Liste neu laden (damit Karte wirklich verschwindet und stats stimmen)
+        // Kleine Verzögerung, damit User erst kopieren kann. Wenn du willst, kann das auch sofort passieren.
       });
 
-      if (!delRes.ok) {
-        toast("Löschen fehlgeschlagen ❌", "error");
-        return;
-      }
-
-      toast("Gelöscht ✅");
-      await loadAdminKeys();
-      await loadKeys();
+      grid.appendChild(card);
     });
-  });
 
-  updateSortHeaderIndicators();
-}
+    // Skeletons aus
+    skeletons.style.display = "none";
 
-async function loadAdminKeys() {
-  const adminToken = document.getElementById("adminToken").value.trim();
-  const status = document.getElementById("adminStatus");
-
-  status.textContent = "Lade Übersicht…";
-
-  const res = await fetch("/api/admin/keys", {
-    headers: { "x-admin-token": adminToken }
-  });
-
-  if (!res.ok) {
-    status.textContent = "Fehler (Token falsch?)";
-    toast("Admin Token falsch ❌", "error");
-    adminState.rows = [];
-    renderAdminTable();
-    return;
+    // Empty state
+    if (keys.length === 0) {
+      emptyState.classList.remove("hidden");
+      grid.style.display = "none";
+    } else {
+      emptyState.classList.add("hidden");
+      grid.style.display = "grid";
+    }
   }
 
-  const rows = await res.json();
-  adminState.rows = rows;
-  status.textContent = `Gefunden: ${rows.length} Einträge`;
-  renderAdminTable();
-}
+  // Feature 9: Teilen-Button (URL kopieren)
+  document.getElementById("shareBtn").addEventListener("click", async () => {
+    try{
+      await navigator.clipboard.writeText(location.href);
+      toast("Link kopiert 🔗");
+    }catch{
+      toast("Konnte Link nicht kopieren", "error");
+    }
+  });
 
-/* Admin: Hinzufügen + Bulk Import */
-document.getElementById("addBtn").addEventListener("click", async () => {
-  const title = document.getElementById("title").value.trim();
-  const imageUrl = document.getElementById("imageUrl").value.trim();
-  const steamKey = document.getElementById("steamKey").value.trim();
-  const bulk = document.getElementById("bulkKeys").value.trim();
-  const adminToken = document.getElementById("adminToken").value.trim();
-  const addStatus = document.getElementById("addStatus");
+  // Steam Cover holen
+  document.getElementById("fetchCoverBtn").addEventListener("click", async () => {
+    const title = document.getElementById("title").value.trim();
+    const status = document.getElementById("coverStatus");
 
-  if (!title) { toast("Bitte Spielname eingeben", "error"); return; }
-  if (!imageUrl) { toast("Bitte Cover holen oder Bild-URL setzen", "error"); return; }
-
-  addStatus.textContent = "Speichere…";
-
-  if (bulk) {
-    const keys = bulk.split("\n").map(k => k.trim()).filter(Boolean);
-    let okCount = 0;
-    let dupCount = 0;
-
-    for (const k of keys) {
-      const r = await fetch("/api/admin/add", {
-        method:"POST",
-        headers:{
-          "Content-Type":"application/json",
-          "x-admin-token": adminToken
-        },
-        body: JSON.stringify({ title, imageUrl, steamKey: k })
-      });
-
-      if (r.ok) okCount++;
-      else if (r.status === 409) dupCount++;
+    if (!title) {
+      status.textContent = "Bitte erst einen Spielnamen eingeben.";
+      toast("Bitte erst Spielname eingeben", "error");
+      return;
     }
 
-    toast(`${okCount} hinzugefügt ✅${dupCount ? `, ${dupCount} doppelt ❌` : ""}`);
-    document.getElementById("bulkKeys").value = "";
+    status.textContent = "Suche Steam…";
+
+    const res = await fetch(`/api/steam/cover?title=${encodeURIComponent(title)}`);
+
+    if (!res.ok) {
+      status.textContent = "Kein Treffer gefunden (oder Steam nicht erreichbar).";
+      toast("Kein Steam Treffer ❌", "error");
+      return;
+    }
+
+    const data = await res.json();
+    document.getElementById("imageUrl").value = data.header;
+    status.textContent = `Gefunden: ${data.matchedTitle} (AppID: ${data.appid})`;
+    toast("Cover übernommen ✅");
+  });
+
+  // Admin Table Sort state
+  const adminState = {
+    rows: [],
+    sortKey: "id",
+    sortDir: "asc"
+  };
+
+  function compareByKey(a, b, key, dir) {
+    const mul = dir === "asc" ? 1 : -1;
+    const av = a[key];
+    const bv = b[key];
+
+    if (key === "id" || key === "claimed") return (Number(av) - Number(bv)) * mul;
+
+    if (key === "claimedAt") {
+      const ad = av ? Date.parse(av) : 0;
+      const bd = bv ? Date.parse(bv) : 0;
+      return (ad - bd) * mul;
+    }
+
+    return String(av ?? "").localeCompare(String(bv ?? ""), "de", { sensitivity: "base" }) * mul;
+  }
+
+  function updateSortHeaderIndicators() {
+    const ths = document.querySelectorAll("#adminTable thead th");
+    ths.forEach(th => th.textContent = th.textContent.replace(/ [▲▼]$/, ""));
+
+    const mapKeyToIndex = { id:0, title:1, claimed:2, claimedAt:3, steamKey:4 };
+    const idx = mapKeyToIndex[adminState.sortKey];
+    const arrow = adminState.sortDir === "asc" ? "▲" : "▼";
+    if (ths[idx]) ths[idx].textContent = ths[idx].textContent + " " + arrow;
+  }
+
+  function attachAdminSortHandlers() {
+    const ths = document.querySelectorAll("#adminTable thead th");
+    const map = { 0:"id", 1:"title", 2:"claimed", 3:"claimedAt", 4:"steamKey" };
+
+    ths.forEach((th, idx) => {
+      if (!(idx in map)) return;
+      th.style.cursor = "pointer";
+      th.title = "Klicken zum Sortieren";
+
+      th.addEventListener("click", () => {
+        const key = map[idx];
+        if (adminState.sortKey === key) adminState.sortDir = adminState.sortDir === "asc" ? "desc" : "asc";
+        else { adminState.sortKey = key; adminState.sortDir = "asc"; }
+        renderAdminTable();
+      });
+    });
+
+    updateSortHeaderIndicators();
+  }
+
+  function renderAdminTable() {
+    const tbody = document.querySelector("#adminTable tbody");
+    const adminToken = document.getElementById("adminToken").value.trim();
+
+    const rows = [...adminState.rows].sort((a,b) => compareByKey(a,b,adminState.sortKey, adminState.sortDir));
+
+    tbody.innerHTML = "";
+    rows.forEach(r => {
+      const tr = document.createElement("tr");
+      const claimedText = r.claimed ? "✅ ja" : "❌ nein";
+      const claimedAt = r.claimedAt ? r.claimedAt : "-";
+
+      tr.innerHTML = `
+        <td>${r.id}</td>
+        <td>${escapeHtml(r.title)}</td>
+        <td>${claimedText}</td>
+        <td>${escapeHtml(claimedAt)}</td>
+        <td style="font-family: ui-monospace, Consolas, monospace;">${escapeHtml(r.steamKey)}</td>
+        <td><button data-del-id="${r.id}" class="btn-danger" type="button">Löschen</button></td>
+      `;
+
+      tbody.appendChild(tr);
+    });
+
+    tbody.querySelectorAll("button[data-del-id]").forEach(btn => {
+      btn.addEventListener("click", async () => {
+        const id = btn.getAttribute("data-del-id");
+        if (!confirm(`Key mit ID ${id} wirklich löschen?`)) return;
+
+        const delRes = await fetch(`/api/admin/keys/${id}`, {
+          method: "DELETE",
+          headers: { "x-admin-token": adminToken }
+        });
+
+        if (!delRes.ok) {
+          toast("Löschen fehlgeschlagen ❌", "error");
+          return;
+        }
+
+        toast("Gelöscht ✅");
+        await loadAdminKeys();
+        await loadKeys();
+      });
+    });
+
+    updateSortHeaderIndicators();
+
+    // Feature 6: claimed count anzeigen (nur wenn admin unlocked)
+    const claimedCount = adminState.rows.filter(r => r.claimed).length;
+    setClaimedCount(claimedCount);
+  }
+
+  async function loadAdminKeys() {
+    const adminToken = document.getElementById("adminToken").value.trim();
+    const status = document.getElementById("adminStatus");
+
+    status.textContent = "Lade Übersicht…";
+
+    const res = await fetch("/api/admin/keys", {
+      headers: { "x-admin-token": adminToken }
+    });
+
+    if (!res.ok) {
+      status.textContent = "Fehler (Token falsch?)";
+      toast("Admin Token falsch ❌", "error");
+      adminState.rows = [];
+      renderAdminTable();
+      return;
+    }
+
+    const rows = await res.json();
+    adminState.rows = rows;
+    status.textContent = `Gefunden: ${rows.length} Einträge`;
+    renderAdminTable();
+  }
+
+  // Admin: hinzufügen + Bulk Import
+  document.getElementById("addBtn").addEventListener("click", async () => {
+    const title = document.getElementById("title").value.trim();
+    const imageUrl = document.getElementById("imageUrl").value.trim();
+    const steamKey = document.getElementById("steamKey").value.trim();
+    const bulk = document.getElementById("bulkKeys").value.trim();
+    const adminToken = document.getElementById("adminToken").value.trim();
+    const addStatus = document.getElementById("addStatus");
+
+    if (!title) { toast("Bitte Spielname eingeben", "error"); return; }
+    if (!imageUrl) { toast("Bitte Cover holen oder Bild-URL setzen", "error"); return; }
+
+    addStatus.textContent = "Speichere…";
+
+    if (bulk) {
+      const keys = bulk.split("\n").map(k => k.trim()).filter(Boolean);
+      let okCount = 0;
+      let dupCount = 0;
+
+      for (const k of keys) {
+        const r = await fetch("/api/admin/add", {
+          method:"POST",
+          headers:{
+            "Content-Type":"application/json",
+            "x-admin-token": adminToken
+          },
+          body: JSON.stringify({ title, imageUrl, steamKey: k })
+        });
+
+        if (r.ok) okCount++;
+        else if (r.status === 409) dupCount++;
+      }
+
+      toast(`${okCount} hinzugefügt ✅${dupCount ? `, ${dupCount} doppelt ❌` : ""}`);
+      addStatus.textContent = "Bulk Import fertig.";
+      document.getElementById("bulkKeys").value = "";
+      document.getElementById("steamKey").value = "";
+
+      await loadKeys();
+      await loadAdminKeys();
+      return;
+    }
+
+    if (!steamKey) { toast("Bitte Steam Key eingeben oder Bulk nutzen", "error"); return; }
+
+    const res = await fetch("/api/admin/add", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-admin-token": adminToken
+      },
+      body: JSON.stringify({ title, imageUrl, steamKey })
+    });
+
+    if (res.status === 409) {
+      toast("Steam-Key existiert bereits ❌", "error");
+      addStatus.textContent = "Doppelt.";
+      return;
+    }
+
+    if (!res.ok) {
+      toast("Fehler beim Hinzufügen ❌", "error");
+      addStatus.textContent = "Fehler.";
+      return;
+    }
+
+    toast("Hinzugefügt ✅");
+    addStatus.textContent = "Hinzugefügt!";
     document.getElementById("steamKey").value = "";
 
     await loadKeys();
     await loadAdminKeys();
-    addStatus.textContent = "Bulk Import fertig.";
-    return;
-  }
-
-  if (!steamKey) { toast("Bitte Steam Key eingeben oder Bulk nutzen", "error"); return; }
-
-  const res = await fetch("/api/admin/add", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-admin-token": adminToken
-    },
-    body: JSON.stringify({ title, imageUrl, steamKey })
   });
 
-  if (res.status === 409) {
-    toast("Steam-Key existiert bereits ❌", "error");
-    addStatus.textContent = "Doppelt.";
-    return;
-  }
-
-  if (!res.ok) {
-    toast("Fehler beim Hinzufügen ❌", "error");
-    addStatus.textContent = "Fehler.";
-    return;
-  }
-
-  toast("Hinzugefügt ✅");
-  addStatus.textContent = "Hinzugefügt!";
-  document.getElementById("steamKey").value = "";
-
-  await loadKeys();
-  await loadAdminKeys();
-});
-
-document.getElementById("refreshAdminBtn").addEventListener("click", async () => {
-  await loadAdminKeys();
-});
-
-/* Admin Unlock */
-async function unlockAdmin() {
-  const token = document.getElementById("adminToken").value.trim();
-  const status = document.getElementById("unlockStatus");
-  const adminArea = document.getElementById("adminArea");
-
-  if (!token) {
-    status.textContent = "Bitte Token eingeben.";
-    toast("Token fehlt", "error");
-    adminArea.classList.add("hidden");
-    return;
-  }
-
-  status.textContent = "Prüfe Token…";
-
-  const res = await fetch("/api/admin/keys", {
-    headers: { "x-admin-token": token }
+  document.getElementById("refreshAdminBtn").addEventListener("click", async () => {
+    await loadAdminKeys();
   });
 
-  if (!res.ok) {
-    status.textContent = "Token falsch.";
-    toast("Token falsch ❌", "error");
-    adminArea.classList.add("hidden");
-    return;
+  // Admin unlock + token merken + logout
+  async function unlockAdmin() {
+    const token = document.getElementById("adminToken").value.trim();
+    const status = document.getElementById("unlockStatus");
+    const adminArea = document.getElementById("adminArea");
+    const logoutBtn = document.getElementById("logoutBtn");
+
+    if (!token) {
+      status.textContent = "Bitte Token eingeben.";
+      adminArea.classList.add("hidden");
+      logoutBtn.classList.add("hidden");
+      return;
+    }
+
+    status.textContent = "Prüfe Token…";
+
+    const res = await fetch("/api/admin/keys", {
+      headers: { "x-admin-token": token }
+    });
+
+    if (!res.ok) {
+      status.textContent = "Token falsch.";
+      adminArea.classList.add("hidden");
+      logoutBtn.classList.add("hidden");
+      return;
+    }
+
+    status.textContent = "Admin freigeschaltet ✅";
+    adminArea.classList.remove("hidden");
+    logoutBtn.classList.remove("hidden");
+
+    // Token merken
+    localStorage.setItem("adminToken", token);
+
+    // Admin Tabelle laden
+    await loadAdminKeys();
   }
 
-  status.textContent = "Admin freigeschaltet ✅";
-  toast("Admin freigeschaltet ✅");
-  adminArea.classList.remove("hidden");
- // Token merken
-  localStorage.setItem("adminToken", token);
+  document.getElementById("unlockAdminBtn").addEventListener("click", unlockAdmin);
 
-// Logout Button zeigen
-document.getElementById("logoutBtn").style.display = "block";
+  document.getElementById("adminToken").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") unlockAdmin();
+  });
 
-  await loadAdminKeys();
-}
+  document.getElementById("logoutBtn").addEventListener("click", async () => {
+    localStorage.removeItem("adminToken");
+    document.getElementById("adminToken").value = "";
+    document.getElementById("adminArea").classList.add("hidden");
+    document.getElementById("logoutBtn").classList.add("hidden");
+    document.getElementById("unlockStatus").textContent = "Ausgeloggt.";
+    document.getElementById("statsClaimed").classList.add("hidden");
+    toast("Logout ✅");
+  });
 
-document.getElementById("unlockAdminBtn").addEventListener("click", unlockAdmin);
-document.getElementById("adminToken").addEventListener("keydown", (e) => {
-  if (e.key === "Enter") unlockAdmin();
-});
+  // Auto-login
+  const saved = localStorage.getItem("adminToken");
+  if (saved) {
+    document.getElementById("adminToken").value = saved;
+    // nicht sofort toasten, einfach entsperren
+    unlockAdmin();
+  }
 
-attachAdminSortHandlers();
-document.getElementById("logoutBtn").addEventListener("click", () => {
-  localStorage.removeItem("adminToken");
-  document.getElementById("adminToken").value = "";
-  document.getElementById("adminArea").classList.add("hidden");
-  document.getElementById("unlockStatus").textContent = "Ausgeloggt.";
-  document.getElementById("logoutBtn").style.display = "none";
-  toast("Logout ✅");
-});
-// Beim Start: Token aus localStorage laden und versuchen freizuschalten
-const saved = localStorage.getItem("adminToken");
-if (saved) {
-  document.getElementById("adminToken").value = saved;
-  unlockAdmin();
-}
-loadKeys();
+  // Init
+  attachAdminSortHandlers();
+  loadKeys();
 </script>
 </body>
 </html>
