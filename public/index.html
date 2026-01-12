@@ -489,10 +489,19 @@
       const closeBtn = card.querySelector(".closeBtn");
 
       btn.addEventListener("click", async () => {
+      const ok = confirm("Willst du diesen Steam Key wirklich claimen?\n\n⚠️ Der Key kann nur einmal genutzt werden.");
+      if (!ok) {
+      return;
+         }
         btn.disabled = true;
         status.textContent = "Claim läuft…";
 
-        const claimRes = await fetch(`/api/claim/${k.id}`, { method: "POST" });
+        const claimRes = await fetch(`/api/claim/${k.id}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ website: "" }) // Honeypot: muss IMMER leer sein
+         });
+
 
         if (claimRes.status === 429) {
           toast("Bitte kurz warten ⏳", "error");
