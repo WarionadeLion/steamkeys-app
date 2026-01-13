@@ -423,6 +423,35 @@
     </div>
 
     <div id="adminArea" class="hidden">
+
+<div class="admin">
+  <h2>Admin: Feedback</h2>
+
+  <button id="refreshFeedbackBtn" class="btn-primary" type="button">
+    Feedback neu laden
+  </button>
+
+  <div id="adminFeedbackStatus" class="small"></div>
+
+  <div style="overflow:auto; margin-top:10px;">
+    <table id="adminFeedbackTable"
+           border="1"
+           cellpadding="8"
+           style="border-collapse:collapse; width:100%;">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Sterne</th>
+          <th>Zeit</th>
+          <th>Nachricht</th>
+          <th>Aktion</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</div>  
+
       <div class="admin">
         <h2>Admin: Key hinzufügen</h2>
         <div class="row">
@@ -461,33 +490,6 @@
         </div>
       </div>
     </div>
-<div class="admin">
-  <h2>Admin: Feedback</h2>
-
-  <button id="refreshFeedbackBtn" class="btn-primary" type="button">
-    Feedback neu laden
-  </button>
-
-  <div id="adminFeedbackStatus" class="small"></div>
-
-  <div style="overflow:auto; margin-top:10px;">
-    <table id="adminFeedbackTable"
-           border="1"
-           cellpadding="8"
-           style="border-collapse:collapse; width:100%;">
-      <thead>
-        <tr>
-          <th>ID</th>
-          <th>Sterne</th>
-          <th>Zeit</th>
-          <th>Nachricht</th>
-          <th>Aktion</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-  </div>
-</div>  
 </div>
 
 <script>
@@ -912,6 +914,7 @@
     toast("Hinzugefügt ✅");
     addStatus.textContent = "Hinzugefügt!";
     document.getElementById("steamKey").value = "";
+
 
     await loadKeys();
     await loadAdminKeys();
