@@ -332,6 +332,24 @@
       to{ background-position: -200% 0; }
     }
 
+/* Feedback Sterne */
+.stars {
+  display: flex;
+  gap: 6px;
+  font-size: 22px;
+}
+
+.star {
+  cursor: pointer;
+  opacity: 0.4;
+  user-select: none;
+}
+
+.star.active {
+  opacity: 1;
+  text-shadow: 0 0 8px rgba(255,215,0,.6);
+}
+
   </style>
 </head>
 
@@ -367,6 +385,31 @@
 
     <!-- Cards -->
     <div id="grid" class="grid"></div>
+
+<div class="admin">
+  <h2>Feedback</h2>
+  <p class="small">Anonymes Feedback – nur der Admin sieht es.</p>
+
+  <div class="stars" id="starRow">
+    <span class="star" data-v="1">★</span>
+    <span class="star" data-v="2">★</span>
+    <span class="star" data-v="3">★</span>
+    <span class="star" data-v="4">★</span>
+    <span class="star" data-v="5">★</span>
+  </div>
+
+  <textarea id="feedbackMessage" rows="4"
+    placeholder="Was können wir verbessern?"
+    style="max-width:520px;"></textarea>
+
+  <!-- Honeypot -->
+  <input id="fbWebsite" class="hidden" />
+
+  <div>
+    <button id="sendFeedbackBtn" class="btn-primary">Feedback senden</button>
+    <div id="feedbackSendStatus" class="small"></div>
+  </div>
+</div>
 
     <!-- Admin Login (sichtbar), Admin Area (versteckt bis Token ok) -->
     <div class="admin" id="adminLogin">
@@ -418,7 +461,34 @@
         </div>
       </div>
     </div>
+<div class="admin">
+  <h2>Admin: Feedback</h2>
+
+  <button id="refreshFeedbackBtn" class="btn-primary" type="button">
+    Feedback neu laden
+  </button>
+
+  <div id="adminFeedbackStatus" class="small"></div>
+
+  <div style="overflow:auto; margin-top:10px;">
+    <table id="adminFeedbackTable"
+           border="1"
+           cellpadding="8"
+           style="border-collapse:collapse; width:100%;">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Sterne</th>
+          <th>Zeit</th>
+          <th>Nachricht</th>
+          <th>Aktion</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
   </div>
+</div>  
+</div>
 
 <script>
   function toast(msg, type="success", timeout=2500){
@@ -887,6 +957,8 @@
 
     // Admin Tabelle laden
     await loadAdminKeys();
+    await loadAdminFeedback();
+
   }
 
   document.getElementById("unlockAdminBtn").addEventListener("click", unlockAdmin);
@@ -916,6 +988,122 @@
   // Init
   attachAdminSortHandlers();
   loadKeys();
+
+let selectedRating = 5;
+
+function renderStars(val) {
+  document.querySelectorAll("#starRow .star").forEach(s => {
+    s.classList.toggle("active", Number(s.dataset.v) <= val);
+  });
+}
+
+renderStars(selectedRating);
+
+document.querySelectorAll("#starRow .star").forEach(s => {
+  s.onclick = () => {
+    selectedRating = Number(s.dataset.v);
+    renderStars(selectedRating);
+  };
+});
+
+document.getElementById("sendFeedbackBtn").onclick = async () => {
+  const msg = document.getElementById("feedbackMessage").value.trim();
+  const status = document.getElementById("feedbackSendStatus");
+
+  if (msg.length < 3) {
+    status.textContent = "Bitte mindestens 3 Zeichen.";
+    return;
+  }
+
+  status.textContent = "Sende…";
+
+  const res = await fetch("/api/feedback", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      rating: selectedRating,
+      message: msg,
+      website: document.getElementById("fbWebsite").value
+    })
+  });
+
+  if (!res.ok) {
+  const t = await res.text().catch(() => "");
+  status.textContent = `Fehler beim Senden (${res.status})`;
+  console.log("Feedback Fehler:", res.status, t);
+  return;
+}
+
+  status.textContent = "Danke! 🙏";
+  document.getElementById("feedbackMessage").value = "";
+  selectedRating = 5;
+  renderStars(selectedRating);
+};
+
+async function loadAdminFeedback() {
+  const adminToken = document.getElementById("adminToken").value.trim();
+  const status = document.getElementById("adminFeedbackStatus");
+  const tbody = document.querySelector("#adminFeedbackTable tbody");
+
+  if (!adminToken) {
+    status.textContent = "Bitte Admin-Token eingeben.";
+    tbody.innerHTML = "";
+    return;
+  }
+
+  status.textContent = "Lade Feedback…";
+
+  const res = await fetch("/api/admin/feedback", {
+    headers: { "x-admin-token": adminToken }
+  });
+
+  if (!res.ok) {
+    status.textContent = `Fehler (${res.status})`;
+    tbody.innerHTML = "";
+    return;
+  }
+
+  const rows = await res.json();
+  status.textContent = `Gefunden: ${rows.length}`;
+
+  tbody.innerHTML = "";
+  rows.forEach(r => {
+    const stars =
+      "★★★★★".slice(0, r.rating) +
+      "☆☆☆☆☆".slice(0, 5 - r.rating);
+
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${r.id}</td>
+      <td>${stars}</td>
+      <td>${escapeHtml(r.createdAt)}</td>
+      <td>${escapeHtml(r.message)}</td>
+      <td>
+        <button data-fb-del="${r.id}" type="button">Löschen</button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  document.querySelectorAll("[data-fb-del]").forEach(btn => {
+    btn.onclick = async () => {
+      const id = btn.dataset.fbDel;
+      if (!confirm("Feedback löschen?")) return;
+
+      await fetch(`/api/admin/feedback/${id}`, {
+        method: "DELETE",
+        headers: { "x-admin-token": adminToken }
+      });
+
+      loadAdminFeedback();
+    };
+  });
+}
+
+document
+  .getElementById("refreshFeedbackBtn")
+  ?.addEventListener("click", loadAdminFeedback);
+
 </script>
 </body>
 </html>
