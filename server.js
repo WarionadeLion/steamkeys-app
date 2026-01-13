@@ -57,7 +57,26 @@ async function initDb() {
       claimedAt TEXT
     )
   `);
+
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS feedback (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      rating INTEGER NOT NULL,
+      message TEXT NOT NULL,
+      createdAt TEXT NOT NULL
+    )
+  `);
+
+  // Falls feedback schon existiert (alte Version ohne rating), Spalte nachrüsten
+  try {
+    await db.execute(`ALTER TABLE feedback ADD COLUMN rating INTEGER DEFAULT 5`);
+    console.log("✅ feedback.rating Spalte hinzugefügt");
+  } catch (e) {
+    // Wenn die Spalte schon existiert, kommt ein Fehler – den ignorieren wir
+  }
+
 }
+
 initDb();
 
 // --------------------
@@ -97,6 +116,39 @@ const lastClaimByIp = new Map();
 // --------------------
 // Public Routes
 // --------------------
+
+// Feedback absenden (öffentlich & anonym)
+app.post("/api/feedback", async (req, res) => {
+  const { rating, message, website } = req.body || {};
+
+  // Honeypot gegen Bots
+  if (typeof website === "undefined") {
+    return res.status(400).json({ error: "bot_detected" });
+  }
+  if (String(website).trim() !== "") {
+    return res.status(400).json({ error: "bot_detected" });
+  }
+
+  const r = Number(rating);
+  if (!Number.isInteger(r) || r < 1 || r > 5) {
+    return res.status(400).json({ error: "bad_rating" });
+  }
+
+  const text = String(message || "").trim();
+  if (text.length < 3) {
+    return res.status(400).json({ error: "too_short" });
+  }
+  if (text.length > 2000) {
+    return res.status(400).json({ error: "too_long" });
+  }
+
+  await db.execute({
+    sql: `INSERT INTO feedback (rating, message, createdAt) VALUES (?, ?, ?)`,
+    args: [r, text, new Date().toISOString()]
+  });
+
+  res.json({ ok: true });
+});
 
 // Alle verfügbaren Keys
 app.get("/api/keys", async (req, res) => {
@@ -170,6 +222,27 @@ app.post("/api/claim/:id", async (req, res) => {
 // --------------------
 // Admin Routes
 // --------------------
+
+// Admin: Feedback anzeigen
+
+app.get("/api/admin/feedback", requireAdmin, async (req, res) => {
+  const result = await db.execute(`
+    SELECT id, rating, message, createdAt
+    FROM feedback
+    ORDER BY id DESC
+  `);
+  res.json(result.rows);
+});
+
+// Admin: Feedback löschen
+app.delete("/api/admin/feedback/:id", requireAdmin, async (req, res) => {
+  const id = req.params.id;
+  await db.execute({
+    sql: `DELETE FROM feedback WHERE id = ?`,
+    args: [id]
+  });
+  res.json({ ok: true });
+});
 
 // Admin: alle Keys
 app.get("/api/admin/keys", requireAdmin, async (req, res) => {
