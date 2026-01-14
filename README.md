@@ -77,7 +77,6 @@ Benötigte .env Variablen:
 ADMIN_TOKEN=deinGeheimerAdminToken
 DATABASE_URL=deineTursoDatenbankURL
 DATABASE_AUTH_TOKEN=deinTursoAuthToken
-```
 
 🚀 Deployment
 
@@ -88,3 +87,6 @@ Die Datenbank läuft über Turso.
 
 Dies ist ein Hobby-/Community-Projekt
 und wird ohne Garantie bereitgestellt.
+
+```
+
