@@ -76,6 +76,7 @@ Create a .env file with the following variables:
 ADMIN_TOKEN=yourSecretAdminToken
 DATABASE_URL=yourTursoDatabaseUrl
 DATABASE_AUTH_TOKEN=yourTursoAuthToken
+```
 
 🚀 Deployment
 
