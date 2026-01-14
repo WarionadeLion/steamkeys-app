@@ -82,7 +82,7 @@ und wird ohne Garantie bereitgestellt.
 
 ## ⚙️ Lokale Installation
 
-```
+```bash
 npm install
 node server.js
 
