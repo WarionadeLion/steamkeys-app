@@ -66,6 +66,18 @@ Admin-Funktionen:
 
 ---
 
+## 🚀 Deployment
+
+Das Projekt kann problemlos auf Plattformen wie Render deployed werden.
+Die Datenbank läuft über Turso.
+
+## 📌 Hinweis
+
+Dies ist ein Hobby-/Community-Projekt
+und wird ohne Garantie bereitgestellt.
+
+---
+
 ## ⚙️ Lokale Installation
 
 ```bash
@@ -77,16 +89,6 @@ Benötigte .env Variablen:
 ADMIN_TOKEN=deinGeheimerAdminToken
 DATABASE_URL=deineTursoDatenbankURL
 DATABASE_AUTH_TOKEN=deinTursoAuthToken
-
-🚀 Deployment
-
-Das Projekt kann problemlos auf Plattformen wie Render deployed werden.
-Die Datenbank läuft über Turso.
-
-📌 Hinweis
-
-Dies ist ein Hobby-/Community-Projekt
-und wird ohne Garantie bereitgestellt.
 
 ```
 
