@@ -1,12 +1,5 @@
 ![Steam Key Sharing Tool](assets/github-header.png)
 
-
----
-
-# 🇩🇪 TEXT FÜR `README_DE.md` (DEUTSCH)
-
-👉 **Ebenfalls DIREKT unter das Header-Bild**
-
 ```md
 > **Kurzfassung**  
 > Kleines Web-Tool zur fairen Verteilung von Steam Keys.  
@@ -73,9 +66,28 @@ Admin-Funktionen:
 
 ---
 
+##🚀 Deployment
+
+Das Projekt kann problemlos auf Plattformen wie Render deployed werden.
+Die Datenbank läuft über Turso.
+
+---
+
+##📌 Hinweis
+
+Dies ist ein Hobby-Projekt
+und wird ohne Garantie bereitgestellt.
+
+---
+
 ## ⚙️ Lokale Installation
 
 ```bash
 npm install
 node server.js
 
+Benötigte .env Variablen:
+
+ADMIN_TOKEN=deinGeheimerAdminToken
+DATABASE_URL=deineTursoDatenbankURL
+DATABASE_AUTH_TOKEN=deinTursoAuthToken
