@@ -1,89 +1,90 @@
 ![Steam Key Sharing Tool](assets/github-header.png)
 
-> **TL;DR**  
-> A small web tool to share leftover Steam keys fairly.  
-> No login, no tracking, bot protection, hidden admin panel.
+```md
+> **Kurzfassung**  
+> Kleines Web-Tool zur fairen Verteilung von Steam Keys.  
+> Kein Login, kein Tracking, Bot-Schutz, versteckter Admin-Bereich.
 
 ---
 
 ## 🎮 Steam Key Sharing Tool
 
-A lightweight web application to **share leftover Steam keys in a fair and transparent way**.
+Eine schlanke Web-Anwendung, um **übrig gebliebene Steam Keys fair und transparent**
+an eine Community zu verteilen.
 
-The tool was created to avoid common giveaway issues like bots instantly grabbing keys
-or posting keys publicly where they get abused.
+Das Tool wurde entwickelt, um typische Giveaway-Probleme zu vermeiden
+(z.B. Bots, sofortiges Abgreifen von Keys oder öffentlich gepostete Keys).
 
 ---
 
 ## ✨ Features
 
-- 🔑 Steam keys are **hidden by default**
-- 🖱️ Keys are revealed **only after clicking**
-- 🚫 Each key can be claimed **only once**
-- ⏳ Cooldown & basic bot protection
-- 🧑‍💼 Hidden **admin panel** (token protected)
-- 🗂️ Admin overview of all keys
-- ⭐ **Anonymous feedback with 1–5 star rating**
-- 🧾 Feedback visible **only to the admin**
-- 🖼️ Automatic Steam cover fetching
-- 🌐 Ready for online deployment (e.g. Render + Turso)
+- 🔑 Steam Keys sind **standardmäßig verborgen**
+- 🖱️ Key erscheint **erst nach Klick**
+- 🚫 Jeder Key kann **nur einmal** geclaimt werden
+- ⏳ Cooldown & einfacher Bot-Schutz
+- 🧑‍💼 Versteckter **Admin-Bereich** (Token-geschützt)
+- 🗂️ Admin-Übersicht aller Keys
+- ⭐ **Anonymes Feedback mit 1–5 Sternen**
+- 🧾 Feedback ist **nur für den Admin sichtbar**
+- 🖼️ Automatisches Laden von Steam-Covern
+- 🌐 Online deploybar (z.B. Render + Turso)
 
 ---
 
 ## 🧠 Motivation
 
-Posting Steam keys directly in comments is often unfair,
-as bots usually collect them instantly.
+Steam Keys direkt in Kommentaren zu posten ist oft unfair,
+da Bots die Keys sofort einsammeln.
 
-This project focuses on:
+Dieses Projekt legt den Fokus auf:
 - Fairness
-- Transparency
-- A better user experience
+- Transparenz
+- Eine bessere Nutzererfahrung
 
 ---
 
-## 🛠️ Tech Stack
+## 🛠️ Technik
 
 - **Node.js**
 - **Express**
 - **@libsql/client (Turso / SQLite)**
 - **Vanilla HTML / CSS / JavaScript**
-- No accounts, no tracking, no ads
+- Keine Accounts, kein Tracking, keine Werbung
 
 ---
 
-## 🔐 Admin Panel
+## 🔐 Admin-Bereich
 
-The admin area is **hidden by default**  
-and becomes visible only after entering a **valid admin token**.
+Der Admin-Bereich ist standardmäßig **versteckt**  
+und wird erst nach Eingabe eines **gültigen Admin-Tokens** sichtbar.
 
-Admin features:
-- Add and delete Steam keys
-- View all keys (claimed / available)
-- View and delete anonymous feedback
+Admin-Funktionen:
+- Steam Keys hinzufügen & löschen
+- Übersicht aller Keys (verfügbar / geclaimt)
+- Anonymes Feedback ansehen & löschen
 
 ---
 
-## ⚙️ Local Setup
+## ⚙️ Lokale Installation
 
 ```bash
-
 npm install
 node server.js
 
-Create a .env file with the following variables:
+Benötigte .env Variablen:
 
-ADMIN_TOKEN=yourSecretAdminToken
-DATABASE_URL=yourTursoDatabaseUrl
-DATABASE_AUTH_TOKEN=yourTursoAuthToken
+ADMIN_TOKEN=deinGeheimerAdminToken
+DATABASE_URL=deineTursoDatenbankURL
+DATABASE_AUTH_TOKEN=deinTursoAuthToken
 ```
 
 🚀 Deployment
 
-The project can easily be deployed on platforms like Render.
-The database runs on Turso.
+Das Projekt kann problemlos auf Plattformen wie Render deployed werden.
+Die Datenbank läuft über Turso.
 
-📌 Disclaimer
+📌 Hinweis
 
-This is a hobby project.
-It is free to use and provided without warranty.
+Dies ist ein Hobby-/Community-Projekt
+und wird ohne Garantie bereitgestellt.
