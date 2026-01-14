@@ -90,5 +90,4 @@ ADMIN_TOKEN=deinGeheimerAdminToken
 DATABASE_URL=deineTursoDatenbankURL
 DATABASE_AUTH_TOKEN=deinTursoAuthToken
 
-```
 
